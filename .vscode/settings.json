@@ -1,0 +1,18 @@
+{
+  "cSpell.words": [
+    "CEST",
+    "println",
+    "tstruct",
+    "wifi"
+  ],
+  "files.associations": {
+    "Dockerfile.*": "dockerfile",
+    "array": "cpp",
+    "deque": "cpp",
+    "list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "vector": "cpp",
+    "initializer_list": "cpp"
+  }
+}
