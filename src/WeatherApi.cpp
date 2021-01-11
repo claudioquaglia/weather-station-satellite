@@ -47,8 +47,7 @@ String WeatherApi::startRequest(String apiUrl, WiFiClient* wifiClient, HTTPClien
       response = "";
     }
 
-    DynamicJsonDocument doc(1536);
-    deserializeJson(doc, httpClient->getString());
+    response = httpClient->getString();
   } else {
     Serial.printf("[HTTP] GET... failed, error: %s\n", httpClient->errorToString(httpCode).c_str());
     response = "";
