@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
 
 typedef struct WeatherApiConditionData {
   // Weather condition text
@@ -139,6 +140,10 @@ class WeatherApi {
     String language;
 
     void doUpdate(WeatherApiData* data, String weatherPath, String astronomyPath);
+    void mapLocationData(DynamicJsonDocument locationData);
+    void mapWeatherData(DynamicJsonDocument weatherData);
+    void mapAstronomyData(DynamicJsonDocument astronomyData);
+    void parseData(String weatherJson, String astronomyJson);
     String currentDateTime();
     String startRequest(const String apiUrl, WiFiClient* wifiClient, HTTPClient* httpClient);
     String handleRequestError(int errorCode);
