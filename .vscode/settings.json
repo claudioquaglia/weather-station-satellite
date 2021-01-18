@@ -3,7 +3,13 @@
     "CEST",
     "println",
     "tstruct",
-    "wifi"
+    "wifi",
+    "rssi",
+    "tstruct",
+    "wifi",
+    "xpos",
+    "ypos",
+    "Noto"
   ],
   "files.associations": {
     "Dockerfile.*": "dockerfile",
