@@ -18,6 +18,7 @@ SOFTWARE.
 */
 
 #include <Arduino.h>
+#include <LittleFS.h>
 #include <ESP8266WiFi.h>          // ESP8266 Core WiFi Library (you most likely already have this in your sketch)
 #include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
@@ -27,19 +28,18 @@ SOFTWARE.
 
 #include "settings.h"
 #include "WeatherApi.h"
-// #include "NotoSansBold15.h"
-// #include "NotoSansBold36.h"
 
 // The font names are arrays references, thus must NOT be in quotes ""
-// #define AA_FONT_SMALL NotoSansBold15
-// #define AA_FONT_LARGE NotoSansBold36
+#define AA_FONT_SMALL "fonts/NotoSans10"
+#define AA_FONT_MID "fonts/NotoSans14"
+#define AA_FONT_LARGE "fonts/NotoSans34"
 
 WeatherApiData currentWeather;
 simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
 TFT_eSPI tft = TFT_eSPI();
 
-void updateData();
+void updateWeatherData();
 void drawWiFiSignal();
 void drawDateTime();
 void drawProgress(uint8_t percentage, String text);
@@ -51,15 +51,41 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println(myWiFiManager->getConfigPortalSSID());
 }
 
+void loadFonts() {
+  if (!LittleFS.begin()) {
+    Serial.println("LittleFS initialisation failed!");
+    while (1) yield(); // Stay here twiddling thumbs waiting
+  }
+
+  Serial.println("\r\nLittleFS available!");
+
+  // ESP32 will crash if any of the fonts are missing
+  bool font_missing = false;
+  if (LittleFS.exists("/fonts/NotoSans10.vlw") == false) font_missing = true;
+  if (LittleFS.exists("/fonts/NotoSans14.vlw") == false) font_missing = true;
+  if (LittleFS.exists("/fonts/NotoSans34.vlw") == false) font_missing = true;
+
+  if (font_missing) {
+    Serial.println("\r\nFont missing in LittleFS, did you upload it?");
+    while(1) yield();
+  }
+  else Serial.println("\r\nFonts found OK.");
+}
+
 void setup() {
   Serial.begin(115200);
 
+  loadFonts();
+
   // Setup the TFT display
   tft.init();
+  tft.setTextSize(1);  // Set font size
   tft.setRotation(0);  // portrait
+  tft.setCursor(0, 0); // Set cursor at top left of screen
   tft.fillScreen(TFT_BLACK);
+  tft.loadFont(AA_FONT_MID, LittleFS); // Must load the font first
+  tft.setTextColor(TFT_WHITE, TFT_BLACK); // Set the font colour AND the background colour so the anti-aliasing works
 
-  tft.setTextSize(1);
   tft.print("Display ready\n");
 
   // WiFiManager
@@ -72,7 +98,6 @@ void setup() {
   wifiManager.setAPCallback(configModeCallback);
 
   if(!wifiManager.autoConnect()) {
-    tft.print("Failed to connect and hit timeout.\n");
     Serial.println("failed to connect and hit timeout");
     // reset and try again, or maybe put it to deep sleep
     ESP.reset();
@@ -85,7 +110,7 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    tft.print(".");
+    Serial.println(".");
   }
 
   tft.print("\nConnected to WiFi with hostname:\n\n  " + hostname + "\n\n");
@@ -96,20 +121,16 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
 
   configTime(UTC_OFFSET * 3600, 0, NTP_SERVERS);
-  drawWiFiSignal();
   // updateData();
-  drawDateTime();
-  drawProgress(30, "caricamento in corso...");
 }
 
 void loop() {
-
+  drawWiFiSignal();
+  drawDateTime();
 }
 
-void updateData() {
-  Serial.println("Updating data");
-  tft.setCursor(50, 50);
-  tft.print("Updating data...");
+/***** Update helper *****/
+void updateWeatherData() {
   WeatherApi *currentWeatherClient = new WeatherApi();
   currentWeatherClient->setMetric(IS_METRIC);
   currentWeatherClient->setLanguage(WEATHER_API_LANGUAGE);
@@ -118,22 +139,25 @@ void updateData() {
   currentWeatherClient = nullptr;
 }
 
-/***************************************************************************************
-**                          Update progress bar
-***************************************************************************************/
+/***** Progress bar helper *****/
 void drawProgress(uint8_t percentage, String text) {
-  int progressPadding = 10;
+  int progressBarSidePadding = 10;
   int progressBarHeight = 8;
-  int maxProgressBarWidth = tft.width() - (progressPadding * 2);
-  int middleH = (tft.height() / 2)  - (progressBarHeight / 2);
-  int progress = (maxProgressBarWidth * percentage) / 100;
+  int maxProgressBarWidth = tft.width() - (progressBarSidePadding * 2);
+  int varticalMiddleScreen = (tft.height() / 2)  - (progressBarHeight / 2);
+  int fillProgress = (maxProgressBarWidth * percentage) / 100;
+
+  int oldTextPadding = tft.getTextPadding();
+  int newTextPadding = tft.textWidth(text, 1);
+
+  tft.setTextPadding(oldTextPadding > newTextPadding ? oldTextPadding : newTextPadding);
 
   tft.setTextSize(1);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-  tft.drawString(text, 120, middleH - progressBarHeight);
-  tft.drawRoundRect(progressPadding, middleH, maxProgressBarWidth, progressBarHeight, 5, TFT_LIGHTGREY);
-  tft.fillRoundRect(progressPadding, middleH, progress, progressBarHeight, 5, TFT_LIGHTGREY);
+  tft.drawString(text, 120, varticalMiddleScreen - progressBarHeight);
+  tft.drawRoundRect(progressBarSidePadding, varticalMiddleScreen, maxProgressBarWidth, progressBarHeight, 4, TFT_LIGHTGREY);
+  tft.fillRoundRect(progressBarSidePadding, varticalMiddleScreen, fillProgress, progressBarHeight, 4, TFT_LIGHTGREY);
 }
 
 /***** Network signal indicator *****/
@@ -166,7 +190,7 @@ void wiFiQualityIndicator(int32_t s, int xpos, int ypos, uint16_t color) {
   tft.drawString(buf.c_str(), xpos, ypos);
 }
 
-// Draw WiFi quality
+/***** Draw WiFi quality *****/
 void drawWiFiSignal() {
   uint16_t color;
   int32_t rssi = WiFi.RSSI();
@@ -175,14 +199,15 @@ void drawWiFiSignal() {
   else if (rssi > -66) color = TFT_GREEN;
   else color = TFT_YELLOW;
 
-  wiFiSignalIndicator(rssi, 200, 1, color);
-  wiFiQualityIndicator(rssi, 220, 3, color);
+  tft.loadFont(AA_FONT_SMALL, LittleFS);
+  yield(); wiFiSignalIndicator(rssi, 200, 6, color);
+  yield(); wiFiQualityIndicator(rssi, 218, 8, color);
+  tft.unloadFont();
 }
 
-// Draw Datetime block
+/***** Draw DateTime *****/
 void drawDateTime() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  // tft.loadFont(AA_FONT_SMALL); // Must load the font first
 
   char time_str[11];
   char *dstAbbrev;
@@ -191,9 +216,10 @@ void drawDateTime() {
 
   String date = WDAY_NAMES[timeinfo->tm_wday] + " " + String(timeinfo->tm_mday) + " " + MONTH_NAMES[timeinfo->tm_mon] + " " + String(1900 + timeinfo->tm_year);
 
+  tft.loadFont(AA_FONT_MID, LittleFS);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString(date, 120, 6);
-
+  tft.drawString(date, 120, 13);
+  tft.unloadFont();
 
   if (IS_STYLE_12HR) {
     int hour = (timeinfo->tm_hour+11)%12+1;  // take care of noon and midnight
@@ -202,9 +228,9 @@ void drawDateTime() {
     sprintf(time_str, "%02d:%02d\n",timeinfo->tm_hour, timeinfo->tm_min);
   }
 
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextSize(2);
-  tft.drawString(String(time_str), 120, 20);
 
-  // tft.unloadFont(); // Remove the font to recover memory used
+  tft.loadFont(AA_FONT_LARGE, LittleFS);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(String(time_str), 120, 45);
+  tft.unloadFont();
 }

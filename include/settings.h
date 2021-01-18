@@ -5,7 +5,7 @@
 
 // Weatherapi setup
 // Sign up here to get an API key: https://www.weatherapi.com/my/
-const String WEATHER_API_APP_ID = "REPLACE API KEY HERE";
+const String WEATHER_API_APP_ID = "REPLACE";
 /*
 Go to https://www.weatherapi.com/api-explorer.aspx and search for a location-
  */
@@ -23,8 +23,8 @@ const String WEATHER_API_LANGUAGE = "it";
 
 // Adjust according to your language
 const String DISPLAYED_CITY_NAME = "Roma";
-const String WDAY_NAMES[] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"};
-const String MONTH_NAMES[] = {"GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"};
+const String WDAY_NAMES[] = {"Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"};
+const String MONTH_NAMES[] = {"Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"};
 
 #define UTC_OFFSET +1
 // change for different NTP (time servers)
@@ -39,8 +39,6 @@ struct dstRule StartRule = {"CEST", Last, Sun, Mar, 2, 3600};
 
 // Central European Time = UTC/GMT +1 hour
 struct dstRule EndRule = {"CET", Last, Sun, Oct, 2, 0};
-
-simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
 // Update every 10 minutes
 const int UPDATE_INTERVAL_SECS = 10 * 60;
