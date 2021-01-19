@@ -28,6 +28,7 @@ SOFTWARE.
 
 #include "settings.h"
 #include "WeatherApi.h"
+#include "DhtSensor.h"
 
 // The font names are arrays references, thus must NOT be in quotes ""
 #define AA_FONT_SMALL "fonts/NotoSans10"
@@ -35,11 +36,13 @@ SOFTWARE.
 #define AA_FONT_LARGE "fonts/NotoSans34"
 
 WeatherApiData currentWeather;
+DhtSensorData internalWeather;
 simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
 TFT_eSPI tft = TFT_eSPI();
 
 void updateWeatherData();
+void updateInternalData();
 void drawWiFiSignal();
 void drawDateTime();
 void drawProgress(uint8_t percentage, String text);
@@ -81,7 +84,7 @@ void setup() {
   tft.init();
   tft.setTextSize(1);  // Set font size
   tft.setRotation(0);  // portrait
-  tft.setCursor(0, 0); // Set cursor at top left of screen
+  tft.setCursor(5, 5); // Set cursor at top left of screen with padding
   tft.fillScreen(TFT_BLACK);
   tft.loadFont(AA_FONT_MID, LittleFS); // Must load the font first
   tft.setTextColor(TFT_WHITE, TFT_BLACK); // Set the font colour AND the background colour so the anti-aliasing works
@@ -122,14 +125,16 @@ void setup() {
 
   configTime(UTC_OFFSET * 3600, 0, NTP_SERVERS);
   // updateData();
-}
-
-void loop() {
   drawWiFiSignal();
   drawDateTime();
 }
 
-/***** Update helper *****/
+void loop() {
+  delay(2500);
+  updateInternalData();
+}
+
+/***** Update weather helper *****/
 void updateWeatherData() {
   WeatherApi *currentWeatherClient = new WeatherApi();
   currentWeatherClient->setMetric(IS_METRIC);
@@ -137,6 +142,15 @@ void updateWeatherData() {
   currentWeatherClient->update(&currentWeather, WEATHER_API_APP_ID, WEATHER_API_LOCATION);
   delete currentWeatherClient;
   currentWeatherClient = nullptr;
+}
+
+/***** Update local helper *****/
+void updateInternalData() {
+  DhtSensor *sensorClient = new DhtSensor(DHT_PIN, DHT_TYPE);
+  sensorClient->setMetric(IS_METRIC);
+  sensorClient->update(&internalWeather);
+  delete sensorClient;
+  sensorClient = nullptr;
 }
 
 /***** Progress bar helper *****/
@@ -200,8 +214,8 @@ void drawWiFiSignal() {
   else color = TFT_YELLOW;
 
   tft.loadFont(AA_FONT_SMALL, LittleFS);
-  yield(); wiFiSignalIndicator(rssi, 200, 6, color);
-  yield(); wiFiQualityIndicator(rssi, 218, 8, color);
+  wiFiSignalIndicator(rssi, 200, 6, color);
+  wiFiQualityIndicator(rssi, 218, 8, color);
   tft.unloadFont();
 }
 
@@ -227,7 +241,6 @@ void drawDateTime() {
   } else {
     sprintf(time_str, "%02d:%02d\n",timeinfo->tm_hour, timeinfo->tm_min);
   }
-
 
   tft.loadFont(AA_FONT_LARGE, LittleFS);
   tft.setTextDatum(MC_DATUM);
