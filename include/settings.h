@@ -1,7 +1,17 @@
 #include <simpleDSTadjust.h>
+#include <Adafruit_Sensor.h>
 
 // Setup
 #define HOSTNAME "ESP8266-OTA-"
+
+// Customize DHT sensor setting. Replace with your connected PIN
+#define DHT_PIN 16          // D0
+
+// Uncomment whatever type you're using!
+#define DHT_TYPE DHT11      // DHT 11
+//#define DHT_TYPE DHT22    // DHT 22  (AM2302), AM2321
+//#define DHT_TYPE DHT21    // DHT 21  (AM2301)
+
 
 // Weatherapi setup
 // Sign up here to get an API key: https://www.weatherapi.com/my/
