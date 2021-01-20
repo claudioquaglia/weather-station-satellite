@@ -15,23 +15,23 @@ boolean DhtSensor::isMetric() {
 }
 
 float DhtSensor::readTemperature() {
-  return this->sensor.readTemperature(this->metric);
+  float prevTemperature = this->data->temperature;
+  // the metric will be reversed 'cause the library ask for isFahrenheit
+  float newTemperature = this->sensor.readTemperature(!this->metric);
+
+  return !isnan(newTemperature) ? newTemperature : prevTemperature;
 }
 
 float DhtSensor::readHumidity() {
-  return this->sensor.readHumidity();
+  float prevHumidity = this->data->humidity;
+  float newHumidity = this->sensor.readHumidity();
+
+  return !isnan(newHumidity) ? newHumidity : prevHumidity;
 }
 
 void DhtSensor::update(DhtSensorData *data) {
   this->data = data;
 
-  Serial.print("Sensor Class\n");
-  Serial.println(this->sensor.read());
-  Serial.print(this->readHumidity());
-  Serial.print(" - ");
-  Serial.print(this->readTemperature());
-  Serial.print("\n");
-
-  this->data->humidity = this->readHumidity();
-  this->data->temperature = this->readTemperature();
+  this->data->humidity = this->readHumidity() - 10;
+  this->data->temperature = this->readTemperature() - 1.5;
 }
